@@ -47,10 +47,14 @@ namespace test_mvc_webapp
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
-            services.AddControllersWithViews();
+            //////////////////////////////////////////////////////////////////////////////////
+            services.AddControllersWithViews(); // ONLY THING IN THIS METHOD WITH NEW PROJECT
+            //////////////////////////////////////////////////////////////////////////////////
+            
             services.AddRazorPages();
 
             // Wire in file system provider for storing images
+            // TODO #1 Re-evaluate if singleton needed
                services.AddSingleton<IFileProvider>(
                     new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/img"))
                     );
@@ -81,9 +85,7 @@ namespace test_mvc_webapp
             }
             app.UseHttpsRedirection();
             app.UseStaticFiles();
-
             app.UseRouting();
-
             app.UseAuthentication();
             app.UseAuthorization();
 
