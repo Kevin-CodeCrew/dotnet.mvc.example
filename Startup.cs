@@ -35,9 +35,9 @@ namespace test_mvc_webapp
                     Configuration.GetConnectionString("DefaultConnection")));
 
 
-            services.AddDbContext<MvcWebAppDbContext>(options =>
-                options.UseSqlite(
-                    Configuration.GetConnectionString("DefaultConnection")));
+            // services.AddDbContext<MvcWebAppDbContext>(options =>
+            //     options.UseSqlite(
+            //         Configuration.GetConnectionString("DefaultConnection")));
 
 
             // services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
@@ -49,16 +49,16 @@ namespace test_mvc_webapp
 
             //////////////////////////////////////////////////////////////////////////////////
             services.AddControllersWithViews(); // ONLY THING IN THIS METHOD WITH NEW PROJECT
-            //////////////////////////////////////////////////////////////////////////////////
-            
+                                                //////////////////////////////////////////////////////////////////////////////////
+
             services.AddRazorPages();
 
             // Wire in file system provider for storing images
             // TODO #1 Re-evaluate if singleton needed
-               services.AddSingleton<IFileProvider>(
-                    new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/img"))
-                    );
-                    
+            services.AddSingleton<IFileProvider>(
+                 new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/img"))
+                 );
+
             // Setup auth policy support to control what different roles see
             services.AddMvc(obj =>
             {
@@ -70,7 +70,7 @@ namespace test_mvc_webapp
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IServiceProvider services)
         {
             if (env.IsDevelopment())
             {
@@ -96,6 +96,39 @@ namespace test_mvc_webapp
                     pattern: "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapRazorPages();
             });
+
+            // SETUP ROLES 
+            CreateUserRoles(services).Wait();
+        }
+
+        private async Task CreateUserRoles(IServiceProvider serviceProvider)
+        {
+            var RoleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+            var testChkRole = RoleManager.FindByNameAsync("admin");
+            IdentityResult roleResult;
+            //Add Admin Role
+            var adminRoleCheck = await RoleManager.RoleExistsAsync("admin");
+            if (!adminRoleCheck)
+            {
+                //create the admin role
+                roleResult = await RoleManager.CreateAsync(new IdentityRole("admin"));
+            }
+
+            //Add User Role
+            var userRoleCheck = await RoleManager.RoleExistsAsync("user");
+            if (!userRoleCheck)
+            {
+                //create the user role
+                roleResult = await RoleManager.CreateAsync(new IdentityRole("user"));
+            }
+            //Add User Role
+            var testRoleCheck = await RoleManager.RoleExistsAsync("test");
+            if (!testRoleCheck)
+            {
+                //create the test role
+                roleResult = await RoleManager.CreateAsync(new IdentityRole("test"));
+            }            
         }
     }
 }

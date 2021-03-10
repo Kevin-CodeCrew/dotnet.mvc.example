@@ -18,12 +18,12 @@ namespace test_mvc_webapp.Controllers
     [Authorize]
     public class ProductsController : Controller
     {
-        private readonly MvcWebAppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
         private readonly IFileProvider fileProvider;
         private readonly IWebHostEnvironment hostingEnvironment;
 
-        public ProductsController(MvcWebAppDbContext context, IFileProvider fileprovider, IWebHostEnvironment env)
+        public ProductsController(ApplicationDbContext context, IFileProvider fileprovider, IWebHostEnvironment env)
         {
             _context = context;
             fileProvider = fileprovider;
