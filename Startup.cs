@@ -15,8 +15,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.FileProviders;
 using System.IO;
-using test_mvc_webapp.Helper;
+// using test_mvc_webapp.Helper;
 using Microsoft.AspNetCore.Mvc;
+using test_mvc_webapp.models;
 
 namespace test_mvc_webapp
 {
@@ -36,22 +37,12 @@ namespace test_mvc_webapp
                 options.UseSqlite(
                     Configuration.GetConnectionString("DefaultConnection")));
 
-
-            // services.AddDbContext<MvcWebAppDbContext>(options =>
-            //     options.UseSqlite(
-            //         Configuration.GetConnectionString("DefaultConnection")));
-
-
-            // services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-            //     .AddEntityFrameworkStores<ApplicationDbContext>();
-
             services.AddDefaultIdentity<IdentityUser>()
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
             //////////////////////////////////////////////////////////////////////////////////
-            services.AddControllersWithViews(); // ONLY THING IN THIS METHOD WITH NEW PROJECT
-                                                //////////////////////////////////////////////////////////////////////////////////
+            services.AddControllersWithViews();                                              
 
             services.AddRazorPages();
 
@@ -76,9 +67,9 @@ namespace test_mvc_webapp
                 opts.Password.RequiredLength = 8;
                 opts.SignIn.RequireConfirmedEmail = true;
             });
-
-            services.AddTransient<EmailHelper>();
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_3_0);  
+            // Add reference to EmailHelper to send registration emails and other
+            // services.AddTransient<EmailHelper>();
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_3_0);  // TODO: Is this necessary?
         }
 
         
@@ -115,34 +106,46 @@ namespace test_mvc_webapp
             CreateUserRoles(services).Wait();
         }
 
+        /*
+            This method will create the roles we need at startup if they do not exist.
+            ATM adds a admin and user role in this example.
+        */
         private async Task CreateUserRoles(IServiceProvider serviceProvider)
         {
             var RoleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-            var testChkRole = RoleManager.FindByNameAsync("admin");
-            IdentityResult roleResult;
-            //Add Admin Role
+            IdentityResult roleResult; // to hold result of checking roles
+            //Add Admin Role if doesnt already exist
             var adminRoleCheck = await RoleManager.RoleExistsAsync("admin");
             if (!adminRoleCheck)
             {
                 //create the admin role
                 roleResult = await RoleManager.CreateAsync(new IdentityRole("admin"));
+                
+                // FIXME: How to create a new default user here?
+                // Add a default admin user 'admin@email.com/P@ssw0rd'
+                // var user = new ApplicationUser // A stock admin user
+                // {
+                //     UserName = "admin@email.com",
+                //     Email = "admin@email.com"
+                // };
+                //var result = await UserManager<ApplicationUser>.CreateAsync(user, "P@ssw0rd");
             }
 
-            //Add User Role
+            //Add User Role if doesnt already exist
             var userRoleCheck = await RoleManager.RoleExistsAsync("user");
             if (!userRoleCheck)
             {
                 //create the user role
                 roleResult = await RoleManager.CreateAsync(new IdentityRole("user"));
             }
-            //Add User Role
-            var testRoleCheck = await RoleManager.RoleExistsAsync("test");
-            if (!testRoleCheck)
-            {
-                //create the test role
-                roleResult = await RoleManager.CreateAsync(new IdentityRole("test"));
-            }            
+            //We could add any other roles we need
+            // var testRoleCheck = await RoleManager.RoleExistsAsync("test");
+            // if (!testRoleCheck)
+            // {
+            //     //create the test role
+            //     roleResult = await RoleManager.CreateAsync(new IdentityRole("test"));
+            // }            
         }
     }
 }

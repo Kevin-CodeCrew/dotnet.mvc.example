@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using test_mvc_webapp.Models;
-using test_mvc_webapp.Helper;
+// using test_mvc_webapp.Helper;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 
@@ -76,17 +76,19 @@ namespace test_mvc_webapp.Areas.Identity.Pages.Account
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
         }
 
+        // This method will be called on registration.
+        // We tailored it to automatically add new registrations to the 'user' role
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
-            //user.Roles.Where(r => r.Role.Name == "Admin").FisrtOrDefault(); 
-            // RoleManager.FindByNameAsync("user");
 
             returnUrl ??= Url.Content("~/");
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             if (ModelState.IsValid)
             {
+                // Original user commented out
                 //var user = new IdentityUser { UserName = Input.Email, Email = Input.Email };
-                var user = new ApplicationUser
+
+                var user = new ApplicationUser // Our new extended user
                 {
                     UserName = Input.Email,
                     Email = Input.Email,
@@ -94,64 +96,44 @@ namespace test_mvc_webapp.Areas.Identity.Pages.Account
                     LastName = Input.LastName
                 };
 
+                // Create the user
                 var result = await _userManager.CreateAsync(user, Input.Password);
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User created a new account with password.");
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    // Unless I encoded the generated token the link in email would not work
                     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
                     
                     var confirmationLink = Url.Action("ConfirmEmail", "Email", new { code, email = user.Email }, Request.Scheme);
                     
+                    // Should getapikey from environment or other for security reasons
                     // var apiKey = System.Environment.GetEnvironmentVariable("SENDGRID_APIKEY");
                     var apiKey ="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";
-                    var client = new SendGridClient(apiKey);
-
+                    var client = new SendGridClient(apiKey); // Get a mail client reference to send an email
+                    // Generate a URL for email that will route properly on the backend
                     var callbackUrl = Url.Page(
                         "/Account/ConfirmEmail",
                         pageHandler: null,
                         values: new { area = "Identity", userId = user.Id, code = code, returnUrl = returnUrl },
                         protocol: Request.Scheme);
 
-
+                    // Build the confirm registration message
                     var msg = new SendGridMessage()
                     {
-                        From = new EmailAddress("kevin@code-crew.org", "Kevin"),
-                        Subject = "Confirm your email",
-                        PlainTextContent = "Hello, Email!",
-                        HtmlContent = $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>"
+                        // From email address MUST match your approved sender email in sendgrid
+                        From = new EmailAddress("kevin@code-crew.org", "CoolApp Administrators"),
+                        Subject = "Please confirm your email",
+                        PlainTextContent = $"Hello, {user.FirstName} {user.LastName}!",
+                        HtmlContent = $"Please confirm your account by clicking here <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>"
                     };
-                    // ALWAYS SEND TO ME FOR TESTING
-                    // msg.AddTo(new EmailAddress("kyancy@gmail.com", "Test Kevin"));
-                    msg.AddTo(new EmailAddress(user.Email, "New User"));
-
+                    // Add the User as a 'to' address. You could have multiple with some emails which is why we use this method to add
+                    msg.AddTo(new EmailAddress(user.Email, $"{user.FirstName} {user.LastName}"));
+                    // Send the email
                     var response = await client.SendEmailAsync(msg);
-
-
-                    // EmailHelper emailHelper = new EmailHelper();
-                    // bool emailResponse = emailHelper.SendEmail(user.Email, confirmationLink);
-
-                    // if (emailResponse)
-                    //     return RedirectToAction("Index");
-                    // else
-                    // {
-                    //     // log email failed 
-                    // }                    
-                    // // Attempt to auto-add role for new user
+                    // // Attempt to auto-add role for new user to 'user' role
                     await _userManager.AddToRoleAsync(user, "user");
-
-                    // // confirmation
-                    // var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    // code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                    // var callbackUrl = Url.Page(
-                    //     "/Account/ConfirmEmail",
-                    //     pageHandler: null,
-                    //     values: new { area = "Identity", userId = user.Id, code = code, returnUrl = returnUrl },
-                    //     protocol: Request.Scheme);
-
-                    // await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
-                    //     $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
-
+                    // If we require email confirmation, do not sign in new user automatially
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {
                         return RedirectToPage("RegisterConfirmation", new { email = Input.Email, returnUrl = returnUrl });
