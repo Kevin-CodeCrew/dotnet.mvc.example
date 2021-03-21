@@ -13,4 +13,5 @@ This is an .NET MVC application to experiement with different features.
 ## Steps
 * Clone project
 * In project directory run a database update `dotnet ef database update` to create the database
-* 
+* Run project `dotnet run`
+
