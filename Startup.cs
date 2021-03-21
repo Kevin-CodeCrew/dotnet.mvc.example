@@ -15,6 +15,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.FileProviders;
 using System.IO;
+using test_mvc_webapp.Helper;
+using Microsoft.AspNetCore.Mvc;
 
 namespace test_mvc_webapp
 {
@@ -67,7 +69,19 @@ namespace test_mvc_webapp
                     .Build();
             });
 
+            // Turn on require confirmation on registration
+            services.Configure<IdentityOptions>(opts =>
+            {
+                opts.User.RequireUniqueEmail = true;
+                opts.Password.RequiredLength = 8;
+                opts.SignIn.RequireConfirmedEmail = true;
+            });
+
+            services.AddTransient<EmailHelper>();
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_3_0);  
         }
+
+        
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IServiceProvider services)

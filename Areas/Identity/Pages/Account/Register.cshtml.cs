@@ -14,6 +14,9 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using test_mvc_webapp.Models;
+using test_mvc_webapp.Helper;
+using SendGrid;
+using SendGrid.Helpers.Mail;
 
 namespace test_mvc_webapp.Areas.Identity.Pages.Account
 {
@@ -62,9 +65,9 @@ namespace test_mvc_webapp.Areas.Identity.Pages.Account
             [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
             public string ConfirmPassword { get; set; }
 
-            public string FirstName {get;set;}
+            public string FirstName { get; set; }
 
-            public string LastName {get;set;}
+            public string LastName { get; set; }
         }
 
         public async Task OnGetAsync(string returnUrl = null)
@@ -74,7 +77,7 @@ namespace test_mvc_webapp.Areas.Identity.Pages.Account
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
-        {            
+        {
             //user.Roles.Where(r => r.Role.Name == "Admin").FisrtOrDefault(); 
             // RoleManager.FindByNameAsync("user");
 
@@ -83,30 +86,71 @@ namespace test_mvc_webapp.Areas.Identity.Pages.Account
             if (ModelState.IsValid)
             {
                 //var user = new IdentityUser { UserName = Input.Email, Email = Input.Email };
-                var user = new ApplicationUser { 
-                    UserName = Input.Email, 
+                var user = new ApplicationUser
+                {
+                    UserName = Input.Email,
                     Email = Input.Email,
                     FirstName = Input.FirstName,
-                    LastName = Input.LastName };
+                    LastName = Input.LastName
+                };
 
                 var result = await _userManager.CreateAsync(user, Input.Password);
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User created a new account with password.");
-                    // Attempt to auto-add role for new user
-                    await _userManager.AddToRoleAsync(user, "user");
-
-                    // confirmation
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                    
+                    var confirmationLink = Url.Action("ConfirmEmail", "Email", new { code, email = user.Email }, Request.Scheme);
+                    
+                    // var apiKey = System.Environment.GetEnvironmentVariable("SENDGRID_APIKEY");
+                    var apiKey ="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";
+                    var client = new SendGridClient(apiKey);
+
                     var callbackUrl = Url.Page(
                         "/Account/ConfirmEmail",
                         pageHandler: null,
                         values: new { area = "Identity", userId = user.Id, code = code, returnUrl = returnUrl },
                         protocol: Request.Scheme);
 
-                    await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
-                        $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+
+                    var msg = new SendGridMessage()
+                    {
+                        From = new EmailAddress("kevin@code-crew.org", "Kevin"),
+                        Subject = "Confirm your email",
+                        PlainTextContent = "Hello, Email!",
+                        HtmlContent = $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>"
+                    };
+                    // ALWAYS SEND TO ME FOR TESTING
+                    // msg.AddTo(new EmailAddress("kyancy@gmail.com", "Test Kevin"));
+                    msg.AddTo(new EmailAddress(user.Email, "New User"));
+
+                    var response = await client.SendEmailAsync(msg);
+
+
+                    // EmailHelper emailHelper = new EmailHelper();
+                    // bool emailResponse = emailHelper.SendEmail(user.Email, confirmationLink);
+
+                    // if (emailResponse)
+                    //     return RedirectToAction("Index");
+                    // else
+                    // {
+                    //     // log email failed 
+                    // }                    
+                    // // Attempt to auto-add role for new user
+                    await _userManager.AddToRoleAsync(user, "user");
+
+                    // // confirmation
+                    // var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    // code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                    // var callbackUrl = Url.Page(
+                    //     "/Account/ConfirmEmail",
+                    //     pageHandler: null,
+                    //     values: new { area = "Identity", userId = user.Id, code = code, returnUrl = returnUrl },
+                    //     protocol: Request.Scheme);
+
+                    // await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
+                    //     $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {
