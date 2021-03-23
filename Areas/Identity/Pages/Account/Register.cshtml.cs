@@ -109,7 +109,7 @@ namespace test_mvc_webapp.Areas.Identity.Pages.Account
                     
                     // Should getapikey from environment or other for security reasons
                     // var apiKey = System.Environment.GetEnvironmentVariable("SENDGRID_APIKEY");
-                    var apiKey ="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";
+                    var apiKey ="nptinsourcecontrol";
                     var client = new SendGridClient(apiKey); // Get a mail client reference to send an email
                     // Generate a URL for email that will route properly on the backend
                     var callbackUrl = Url.Page(
